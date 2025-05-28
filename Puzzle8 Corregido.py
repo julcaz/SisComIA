@@ -1,219 +1,148 @@
-import java.util.*;
+import heapq
+from collections import deque
 
-class Nodo {
-    int[][] estado;
-    Nodo padre;
-    int costo;
-
-    public Nodo(int[][] estado, Nodo padre, int costo) {
-        this.estado = Puzzle8.copiarMatriz(estado);
-        this.padre = padre;
-        this.costo = costo;
-    }
+GOAL_STATE = [1, 2, 3, 4, 5, 6, 7, 8, 0]
+MOVES = {
+    0: [1, 3],
+    1: [0, 2, 4],
+    2: [1, 5],
+    3: [0, 4, 6],
+    4: [1, 3, 5, 7],
+    5: [2, 4, 8],
+    6: [3, 7],
+    7: [4, 6, 8],
+    8: [5, 7]
 }
 
-public class Puzzle8 {
-    private static final int[][] OBJETIVO = {
-        {1, 2, 3},
-        {4, 5, 6},
-        {7, 8, 0}
-    };
+def get_neighbors(state):
+    neighbors = []
+    zero_pos = state.index(0)
+    for move in MOVES[zero_pos]:
+        new_state = state[:]
+        new_state[zero_pos], new_state[move] = new_state[move], new_state[zero_pos]
+        neighbors.append(new_state)
+    return neighbors
 
-    public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in);
+def is_solvable(state):
+    inv_count = 0
+    for i in range(8):
+        for j in range(i+1, 9):
+            if state[i] and state[j] and state[i] > state[j]:
+                inv_count += 1
+    return inv_count % 2 == 0
 
-        System.out.println("Ingrese el estado inicial del rompecabezas (3x3), usando 0 para el espacio vacío:");
-        int[][] estadoInicial = new int[3][3];
+def print_path(came_from, end):
+    path = []
+    while end:
+        path.append(end)
+        end = came_from[tuple(end)]
+    path.reverse()
+    for step in path:
+        print_board(step)
+        print()
 
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                estadoInicial[i][j] = sc.nextInt();
-            }
-        }
+def print_board(state):
+    for i in range(0, 9, 3):
+        print(state[i], state[i+1], state[i+2])
 
-        System.out.println("Seleccione el método de búsqueda:");
-        System.out.println("1. Búsqueda en Anchura (BFS)");
-        System.out.println("2. Búsqueda de Costo Uniforme (UCS)");
-        System.out.println("3. Búsqueda en Profundidad Iterativa (IDDFS)");
-        System.out.println("4. Búsqueda Bidireccional");
+def breadth_first_search(start):
+    visited = set()
+    queue = deque([start])
+    came_from = {tuple(start): None}
 
-        int opcion = sc.nextInt();
-        switch (opcion) {
-            case 1:
-                System.out.println("Ejecutando Búsqueda en Anchura (BFS)...");
-                bfs(estadoInicial);
-                break;
-            case 2:
-                System.out.println("Ejecutando Búsqueda de Costo Uniforme (UCS)...");
-                ucs(estadoInicial);
-                break;
-            case 3:
-                System.out.println("Ejecutando Búsqueda en Profundidad Iterativa (IDDFS)...");
-                iddfs(estadoInicial);
-                break;
-            case 4:
-                System.out.println("Ejecutando Búsqueda Bidireccional...");
-                bidireccional(estadoInicial);
-                break;
-            default:
-                System.out.println("Opción no válida.");
-        }
-    }
+    while queue:
+        current = queue.popleft()
+        if current == GOAL_STATE:
+            print("\n¡Solución encontrada con BFS!")
+            print_path(came_from, current)
+            return
+        visited.add(tuple(current))
+        for neighbor in get_neighbors(current):
+            if tuple(neighbor) not in visited and tuple(neighbor) not in came_from:
+                came_from[tuple(neighbor)] = current
+                queue.append(neighbor)
+    print("No se encontró solución con BFS.")
 
-    private static void bfs(int[][] estadoInicial) {
-        Queue<Nodo> frontera = new LinkedList<>();
-        Set<String> visitados = new HashSet<>();
+def depth_first_search(start):
+    visited = set()
+    stack = [start]
+    came_from = {tuple(start): None}
 
-        Nodo nodoInicial = new Nodo(estadoInicial, null, 0);
-        frontera.add(nodoInicial);
-        visitados.add(Arrays.deepToString(nodoInicial.estado));
+    while stack:
+        current = stack.pop()
+        if current == GOAL_STATE:
+            print("\n¡Solución encontrada con DFS!")
+            print_path(came_from, current)
+            return
+        visited.add(tuple(current))
+        for neighbor in get_neighbors(current):
+            if tuple(neighbor) not in visited and tuple(neighbor) not in came_from:
+                came_from[tuple(neighbor)] = current
+                stack.append(neighbor)
+    print("No se encontró solución con DFS.")
 
-        while (!frontera.isEmpty()) {
-            Nodo nodoActual = frontera.poll();
+def manhattan(state):
+    distance = 0
+    for i, val in enumerate(state):
+        if val == 0:
+            continue
+        goal_pos = GOAL_STATE.index(val)
+        distance += abs(i // 3 - goal_pos // 3) + abs(i % 3 - goal_pos % 3)
+    return distance
 
-            if (esObjetivo(nodoActual.estado)) {
-                System.out.println("¡Solución encontrada!");
-                imprimirCamino(nodoActual);
-                return;
-            }
+def a_star_search(start):
+    open_set = [(manhattan(start), 0, start)]
+    came_from = {tuple(start): None}
+    g_score = {tuple(start): 0}
+    visited = set()
 
-            for (int[][] sucesor : generarSucesores(nodoActual.estado)) {
-                String claveEstado = Arrays.deepToString(sucesor);
-                if (!visitados.contains(claveEstado)) {
-                    frontera.add(new Nodo(sucesor, nodoActual, 0));
-                    visitados.add(claveEstado);
-                }
-            }
-        }
-        System.out.println("No se encontró solución.");
-    }
+    while open_set:
+        _, cost, current = heapq.heappop(open_set)
+        if current == GOAL_STATE:
+            print("\n¡Solución encontrada con A* (heurística de Manhattan)!")
+            print_path(came_from, current)
+            return
+        visited.add(tuple(current))
+        for neighbor in get_neighbors(current):
+            t_neighbor = tuple(neighbor)
+            temp_g = g_score[tuple(current)] + 1
+            if t_neighbor not in g_score or temp_g < g_score[t_neighbor]:
+                g_score[t_neighbor] = temp_g
+                priority = temp_g + manhattan(neighbor)
+                heapq.heappush(open_set, (priority, temp_g, neighbor))
+                came_from[t_neighbor] = current
+    print("No se encontró solución con A*.")
 
-    private static void ucs(int[][] estadoInicial) {
-        PriorityQueue<Nodo> frontera = new PriorityQueue<>(Comparator.comparingInt(n -> n.costo));
-        Set<String> visitados = new HashSet<>();
+def main():
+    print("\n=== 8 Puzzle Solver ===")
+    try:
+        start = list(map(int, input("\nIngresa el estado inicial (9 números del 0 al 8, separados por espacios): ").split()))
+        if len(start) != 9 or not all(n in range(9) for n in start):
+            raise ValueError
+    except ValueError:
+        print("\nEntrada inválida. Debes ingresar 9 números del 0 al 8 sin repetir.")
+        return
 
-        Nodo nodoInicial = new Nodo(estadoInicial, null, 0);
-        frontera.add(nodoInicial);
-        visitados.add(Arrays.deepToString(nodoInicial.estado));
+    if not is_solvable(start):
+        print("\nEste puzzle no es resoluble.")
+        return
 
-        while (!frontera.isEmpty()) {
-            Nodo nodoActual = frontera.poll();
+    print("\nElige el algoritmo de búsqueda:")
+    print("1. Búsqueda por Anchura (BFS)")
+    print("2. Búsqueda por Profundidad (DFS)")
+    print("3. Búsqueda Heurística (A* con Manhattan)")
 
-            if (esObjetivo(nodoActual.estado)) {
-                System.out.println("¡Solución encontrada!");
-                imprimirCamino(nodoActual);
-                return;
-            }
+    choice = input("\nIngresa el número de la opción: ")
 
-            for (int[][] sucesor : generarSucesores(nodoActual.estado)) {
-                String claveEstado = Arrays.deepToString(sucesor);
-                if (!visitados.contains(claveEstado)) {
-                    frontera.add(new Nodo(sucesor, nodoActual, nodoActual.costo + 1));
-                    visitados.add(claveEstado);
-                }
-            }
-        }
-        System.out.println("No se encontró solución.");
-    }
+    if choice == '1':
+        breadth_first_search(start)
+    elif choice == '2':
+        depth_first_search(start)
+    elif choice == '3':
+        a_star_search(start)
+    else:
+        print("\nOpción inválida.")
 
-    private static void iddfs(int[][] estadoInicial) {
-        int profundidadMax = 20;
-        for (int profundidad = 0; profundidad <= profundidadMax; profundidad++) {
-            Set<String> visitados = new HashSet<>();
-            if (dfsLimitado(new Nodo(estadoInicial, null, 0), profundidad, visitados)) {
-                return;
-            }
-        }
-        System.out.println("No se encontró solución.");
-    }
-
-    private static boolean dfsLimitado(Nodo nodo, int limite, Set<String> visitados) {
-        if (esObjetivo(nodo.estado)) {
-            System.out.println("¡Solución encontrada!");
-            imprimirCamino(nodo);
-            return true;
-        }
-        if (limite == 0) return false;
-
-        visitados.add(Arrays.deepToString(nodo.estado));
-
-        for (int[][] sucesor : generarSucesores(nodo.estado)) {
-            String claveEstado = Arrays.deepToString(sucesor);
-            if (!visitados.contains(claveEstado)) {
-                if (dfsLimitado(new Nodo(sucesor, nodo, 0), limite - 1, visitados)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    private static void bidireccional(int[][] estadoInicial) {
-        System.out.println("Método de búsqueda bidireccional aún no implementado.");
-    }
-
-    private static boolean esObjetivo(int[][] estado) {
-        return Arrays.deepEquals(estado, OBJETIVO);
-    }
-
-    private static List<int[][]> generarSucesores(int[][] estado) {
-        List<int[][]> sucesores = new ArrayList<>();
-        int fila = -1, columna = -1;
-
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                if (estado[i][j] == 0) {
-                    fila = i;
-                    columna = j;
-                    break;
-                }
-            }
-        }
-
-        int[][] movimientos = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
-        for (int[] mov : movimientos) {
-            int nuevaFila = fila + mov[0];
-            int nuevaColumna = columna + mov[1];
-
-            if (nuevaFila >= 0 && nuevaFila < 3 && nuevaColumna >= 0 && nuevaColumna < 3) {
-                int[][] nuevoEstado = copiarMatriz(estado);
-                nuevoEstado[fila][columna] = nuevoEstado[nuevaFila][nuevaColumna];
-                nuevoEstado[nuevaFila][nuevaColumna] = 0;
-                sucesores.add(nuevoEstado);
-            }
-        }
-        return sucesores;
-    }
-
-    public static int[][] copiarMatriz(int[][] matriz) {
-        int[][] copia = new int[3][3];
-        for (int i = 0; i < 3; i++) {
-            copia[i] = matriz[i].clone();
-        }
-        return copia;
-    }
-
-    private static void imprimirCamino(Nodo nodo) {
-        List<int[][]> camino = new ArrayList<>();
-        while (nodo != null) {
-            camino.add(nodo.estado);
-            nodo = nodo.padre;
-        }
-
-        Collections.reverse(camino);
-        System.out.println("Camino hacia la solución:");
-        for (int[][] estado : camino) {
-            imprimirEstado(estado);
-            System.out.println();
-        }
-    }
-
-    private static void imprimirEstado(int[][] estado) {
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                System.out.print(estado[i][j] + " ");
-            }
-            System.out.println();
-        }
-    }
-}
+if __name__ == '__main__':
+    main()
+8
