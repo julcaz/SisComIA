@@ -1,0 +1,67 @@
+from sklearn import datasets
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.svm import SVC
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+import numpy as np
+
+def cargar_datos():
+    """Carga el dataset Iris."""
+    iris = datasets.load_iris()
+    X = iris.data
+    y = iris.target
+    return X, y
+
+def dividir_datos(X, y, test_size=0.3, random_state=42):
+    """Divide los datos en entrenamiento y prueba."""
+    return train_test_split(X, y, test_size=test_size, random_state=random_state)
+
+def entrenar_svm(X_train, y_train, kernel='rbf', C=1.0, gamma='scale'):
+    """
+    Entrena el modelo SVM con parámetros especificados.
+    kernel: tipo de núcleo ('linear', 'rbf', 'poly', etc.)
+    C: parámetro de regularización
+    gamma: coeficiente del kernel para 'rbf', 'poly' y 'sigmoid'
+    """
+    svm = SVC(kernel=kernel, C=C, gamma=gamma)
+    svm.fit(X_train, y_train)
+    return svm
+
+def evaluar_modelo(modelo, X_test, y_test):
+    """Evalúa el modelo y muestra métricas."""
+    y_pred = modelo.predict(X_test)
+    print("Matriz de confusión:")
+    print(confusion_matrix(y_test, y_pred))
+    print("\nReporte de clasificación:")
+    print(classification_report(y_test, y_pred))
+    print(f"Precisión: {accuracy_score(y_test, y_pred):.4f}")
+
+def busqueda_hiperparametros(X_train, y_train):
+    """
+    Realiza búsqueda de hiperparámetros con validación cruzada para mejorar el modelo.
+    """
+    parametros = {
+        'C': [0.1, 1, 10, 100],
+        'kernel': ['linear', 'rbf', 'poly'],
+        'gamma': ['scale', 'auto']
+    }
+    grid_search = GridSearchCV(SVC(), parametros, cv=5, scoring='accuracy')
+    grid_search.fit(X_train, y_train)
+    print("Mejores parámetros encontrados:", grid_search.best_params_)
+    print(f"Mejor accuracy en CV: {grid_search.best_score_:.4f}")
+    return grid_search.best_estimator_
+
+def main():
+    X, y = cargar_datos()
+    X_train, X_test, y_train, y_test = dividir_datos(X, y)
+    
+    print("Entrenando modelo SVM básico con kernel RBF...")
+    svm = entrenar_svm(X_train, y_train)
+    evaluar_modelo(svm, X_test, y_test)
+    
+    print("\nRealizando búsqueda de hiperparámetros para mejorar el modelo...")
+    mejor_svm = busqueda_hiperparametros(X_train, y_train)
+    print("\nEvaluando el mejor modelo encontrado...")
+    evaluar_modelo(mejor_svm, X_test, y_test)
+
+if __name__ == "__main__":
+    main()
