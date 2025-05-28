@@ -1,73 +1,59 @@
+from utils_8puzzle import *
+
 import heapq
 
-def a_estrella(grafo, heuristica, inicio, objetivo):
-  
-  
-    cola_prioridad = []
-    heapq.heappush(cola_prioridad, (heuristica[inicio], 0, [inicio]))
-    visitados = set()
+def heuristic(state):
+    distance = 0
+    for i, val in enumerate(state):
+        if val != 0:
+            goal_pos = GOAL_STATE.index(val)
+            current_row, current_col = divmod(i, 3)
+            goal_row, goal_col = divmod(goal_pos, 3)
+            distance += abs(current_row - goal_row) + abs(current_col - goal_col)
+    return distance
 
-    print(f"Iniciando búsqueda A* desde '{inicio}' hacia '{objetivo}'\n")
+def a_star_search(start):
+    open_set = []
+    heapq.heappush(open_set, (heuristic(start), 0, start))
+    came_from = {tuple(start): None}
+    g_score = {tuple(start): 0}
+    closed_set = set()
 
-    while cola_prioridad:
-        f_actual, g_actual, camino = heapq.heappop(cola_prioridad)
-        nodo_actual = camino[-1]
+    while open_set:
+        _, cost, current = heapq.heappop(open_set)
+        if current == GOAL_STATE:
+            print("\n¡Solución encontrada con Búsqueda Heurística (A*)!")
+            print_path(came_from, current)
+            return
+        closed_set.add(tuple(current))
 
-        print(f"Visitando nodo: {nodo_actual} | Costo acumulado: {g_actual} | f(n)={f_actual}")
-        
-        if nodo_actual in visitados:
-            continue
+        for neighbor in get_neighbors(current):
+            tentative_g_score = g_score[tuple(current)] + 1
+            neighbor_t = tuple(neighbor)
+            if neighbor_t in closed_set:
+                continue
+            if neighbor_t not in g_score or tentative_g_score < g_score[neighbor_t]:
+                came_from[neighbor_t] = current
+                g_score[neighbor_t] = tentative_g_score
+                f_score = tentative_g_score + heuristic(neighbor)
+                heapq.heappush(open_set, (f_score, tentative_g_score, neighbor))
+    print("No se encontró solución con A*.")
 
-        visitados.add(nodo_actual)
+def main():
+    print("\n=== Búsqueda Heurística (A*) para el 8 Puzzle ===")
+    try:
+        start = list(map(int, input("\nIngresa el estado inicial (9 números del 0 al 8, separados por espacios): ").split()))
+        if len(start) != 9 or not all(n in range(9) for n in start):
+            raise ValueError
+    except ValueError:
+        print("\nEntrada inválida. Debes ingresar 9 números del 0 al 8 sin repetir.")
+        return
 
-        if nodo_actual == objetivo:
-            print("\n¡Nodo objetivo encontrado!")
-            return camino, g_actual
+    if not is_solvable(start):
+        print("\nEste puzzle no es resoluble.")
+        return
 
-        for vecino, costo in grafo.get(nodo_actual, []):
-            if vecino not in visitados:
-                g_nuevo = g_actual + costo
-                f_nuevo = g_nuevo + heuristica.get(vecino, float('inf'))
-                nuevo_camino = list(camino)
-                nuevo_camino.append(vecino)
-                heapq.heappush(cola_prioridad, (f_nuevo, g_nuevo, nuevo_camino))
-                print(f"  Agregando vecino: {vecino} con f(n): {f_nuevo} | Camino: {nuevo_camino}")
+    a_star_search(start)
 
-        print("-" * 50)
-
-    return None, float('inf')
-
-
-grafo = {
-    'A': [('B', 1), ('C', 4)],
-    'B': [('D', 5), ('E', 2)],
-    'C': [('F', 3)],
-    'D': [],
-    'E': [('F', 1)],
-    'F': []
-}
-
-
-heuristica = {
-    'A': 7,
-    'B': 6,
-    'C': 2,
-    'D': 6,
-    'E': 1,
-    'F': 0
-}
-
-
-inicio = 'A'
-objetivo = 'F'
-
-
-camino_encontrado, costo_total = a_estrella(grafo, heuristica, inicio, objetivo)
-
-
-print("\n" + "=" * 50)
-if camino_encontrado:
-    print(f"Camino óptimo encontrado: {camino_encontrado}")
-    print(f"Costo total del camino: {costo_total}")
-else:
-    print("No se encontró un camino al objetivo.")
+if __name__ == '__main__':
+    main()
