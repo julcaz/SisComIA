@@ -1,57 +1,38 @@
-def dfs(grafo, nodo_inicial, nodo_objetivo):
-    pila = [[nodo_inicial]]  
-    visitados = set()
+from utils_8puzzle import *
 
-    print(f"Iniciando DFS desde {nodo_inicial} buscando {nodo_objetivo}...\n")
+def depth_first_search(start):
+    visited = set()
+    stack = [start]
+    came_from = {tuple(start): None}
 
-    while pila:
-        camino = pila.pop()  
-        nodo = camino[-1]
+    while stack:
+        current = stack.pop()
+        if current == GOAL_STATE:
+            print("\n¡Solución encontrada con Búsqueda por Profundidad (DFS)!")
+            print_path(came_from, current)
+            return
+        visited.add(tuple(current))
+        for neighbor in get_neighbors(current):
+            if tuple(neighbor) not in visited and tuple(neighbor) not in came_from:
+                came_from[tuple(neighbor)] = current
+                stack.append(neighbor)
+    print("No se encontró solución con DFS.")
 
-        print(f"Analizando nodo: {nodo}")
-        print(f"Camino actual: {camino}")
+def main():
+    print("\n=== Búsqueda por Profundidad (DFS) para el 8 Puzzle ===")
+    try:
+        start = list(map(int, input("\nIngresa el estado inicial (9 números del 0 al 8, separados por espacios): ").split()))
+        if len(start) != 9 or not all(n in range(9) for n in start):
+            raise ValueError
+    except ValueError:
+        print("\nEntrada inválida. Debes ingresar 9 números del 0 al 8 sin repetir.")
+        return
 
-        if nodo in visitados:
-            print(f"{nodo} ya fue visitado, se ignora.\n")
-            continue
+    if not is_solvable(start):
+        print("\nEste puzzle no es resoluble.")
+        return
 
-        visitados.add(nodo)
+    depth_first_search(start)
 
-        if nodo == nodo_objetivo:
-            print("\n¡Nodo objetivo encontrado!")
-            return camino
-
-        
-        for vecino in reversed(grafo.get(nodo, [])):
-            if vecino not in visitados:
-                nuevo_camino = list(camino)
-                nuevo_camino.append(vecino)
-                pila.append(nuevo_camino)
-                print(f"  -> Se agrega a la pila: {nuevo_camino}")
-
-        print(f"Nodos visitados hasta ahora: {visitados}\n")
-
-    return None
-
-
-grafo = {
-    'A': ['B', 'C', 'D'],
-    'B': ['E', 'F'],
-    'C': ['G'],
-    'D': ['H'],
-    'E': [],
-    'F': ['I'],
-    'G': [],
-    'H': [],
-    'I': []
-}
-
-inicio = 'A'
-objetivo = 'I'
-
-camino = dfs(grafo, inicio, objetivo)
-
-if camino:
-    print("\nCamino encontrado:", camino)
-else:
-    print("\nNo se encontró un camino.")
+if __name__ == '__main__':
+    main()
